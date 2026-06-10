@@ -1,0 +1,15 @@
+# 核心运行依赖
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+
+# 工作流编排（可选：未安装时自动降级为本地执行器）
+# langgraph>=0.2
+
+# 生产接入（按需启用）
+# httpx>=0.27            # 网页抓取 / 外部 API
+# trafilatura>=1.8       # 网页正文抽取
+# anthropic>=0.40        # LLM 调用
+# psycopg[binary]>=3.1   # PostgreSQL
+# pgvector>=0.2          # 向量检索
+# celery>=5.3            # 生产级后台任务队列
