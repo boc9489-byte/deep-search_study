@@ -17,4 +17,15 @@ app.include_router(reports.router, prefix=settings.api_prefix)
 
 @app.get("/")
 async def root() -> dict:
+    """根路径。
+
+    功能：
+      返回应用名称和 API 文档入口，方便本地启动后快速确认服务可用。
+
+    输入输出：
+      无输入；输出应用名和 docs 路径。
+
+    实现说明：
+      业务接口不挂在根路径，统一使用 `settings.api_prefix`。
+    """
     return {"name": settings.app_name, "docs": "/docs"}

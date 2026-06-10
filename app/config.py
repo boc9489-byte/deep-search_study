@@ -2,6 +2,13 @@
 
 生产环境用 pydantic-settings 从 .env / 环境变量加载；此处给出默认值，
 保证 clone 后无需任何外部配置即可跑通主链路。
+
+设计方案对比：
+  - 方案 A：参数散落在各模块常量里。优点是写起来快；缺点是调参困难，
+    也无法按环境区分开发/测试/生产。
+  - 方案 B：集中 Settings。优点是检索、质量阈值、模型名、并发等参数统一可见，
+    后续迁移到环境变量或配置中心也容易；缺点是需要维护配置结构。
+  - 阶段一选择方案 B，但暂不引入 pydantic-settings，避免增加运行依赖。
 """
 from __future__ import annotations
 
@@ -17,6 +24,13 @@ class EvidenceScoreWeights:
       - 行业研究偏公开权威来源：提高 credibility / freshness；
       - 内部知识问答偏语义匹配：提高 relevance / rerank；
       - 多来源交叉验证偏覆盖面：提高 diversity。
+
+    设计方案对比：
+      - 固定只按 rerank 排序：简单，但会忽略来源可信度和时效；
+      - 多因子加权融合：可解释、可调参，适合企业报告；
+      - 学习排序模型：潜力更高，但需要标注数据和离线训练。
+
+    阶段一采用多因子加权融合。
     """
     relevance: float = 0.35
     credibility: float = 0.20
@@ -31,6 +45,13 @@ class RetrievalConfig:
 
     阶段一使用桩工具，字段先固化为代码默认值；生产环境建议通过
     pydantic-settings 从环境变量、.env 或配置中心加载。
+
+    设计方案对比：
+      - top_k 写死在工具内部：工具简单，但不同业务无法调优；
+      - 独立 RetrievalConfig：路由、工具和 pipeline 都能共享同一组检索约束；
+      - 每个用户/项目动态配置：更灵活，但需要权限、审计和成本控制。
+
+    阶段一使用全局配置，生产可升级为“组织级 + 项目级”配置。
     """
 
     web_top_k: int = 8                # 单次公网检索返回条数；真实搜索 API 会影响成本
@@ -42,7 +63,15 @@ class RetrievalConfig:
 
 @dataclass
 class QualityThresholds:
-    """事实与洞察进入报告的质量门槛。"""
+    """事实与洞察进入报告的质量门槛。
+
+    设计方案对比：
+      - 不设门槛：报告更完整，但弱证据结论会进入正文；
+      - 固定门槛：行为稳定，便于测试；
+      - 动态门槛：可按报告类型调整，但需要更多评估数据。
+
+    阶段一选择固定门槛；生产建议用 Golden Set 调参。
+    """
 
     fact_min_confidence: float = 0.5    # 低于此置信度的事实不进结论
     insight_min_confidence: float = 0.5

@@ -14,8 +14,15 @@ class PageExtractTool:
     name = "page_extract"
 
     async def enrich(self, evidence: Evidence) -> Evidence:
-        """把仅含 snippet 的证据升级为含清洗正文的证据。"""
-        # 内部库片段已是正文，无需抓取
+        """把仅含 snippet 的证据升级为含清洗正文的证据。
+
+        步骤：
+          1. 判断证据类型：内部库片段已经是正文，直接返回；
+          2. 对公网证据，阶段一在已有 content 后追加“已清洗”标记；
+          3. 生产环境这里会真实请求 URL、抽正文、识别发布时间；
+          4. 返回仍然是同一个 Evidence 对象，保持下游 schema 稳定。
+        """
+        # Step 1: 内部库片段已是正文，无需抓取。
         if evidence.source_type != SourceType.PUBLIC_WEB or not evidence.url:
             return evidence
 
