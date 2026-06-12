@@ -29,7 +29,7 @@ def _dump_model(value):
 
 def project_to_doc(rec: ProjectRecord) -> dict:
     return {
-        "id": rec.id,
+        "_id": rec.id,
         "topic": rec.topic,
         "research_goal": rec.research_goal,
         "target_audience": rec.target_audience,
@@ -49,7 +49,7 @@ def project_to_doc(rec: ProjectRecord) -> dict:
 
 def project_from_doc(doc: dict) -> ProjectRecord:
     return ProjectRecord(
-        id=doc["id"],
+        id=doc["_id"],
         topic=doc["topic"],
         research_goal=doc.get("research_goal", ""),
         target_audience=doc.get("target_audience", ""),
@@ -69,7 +69,7 @@ def project_from_doc(doc: dict) -> ProjectRecord:
 
 def task_to_doc(rec: TaskRecord) -> dict:
     return {
-        "id": rec.id,
+        "_id": rec.id,
         "project_id": rec.project_id,
         "task_type": rec.task_type.value,
         "status": rec.status.value,
@@ -82,7 +82,7 @@ def task_to_doc(rec: TaskRecord) -> dict:
 
 def task_from_doc(doc: dict) -> TaskRecord:
     return TaskRecord(
-        id=doc["id"],
+        id=doc["_id"],
         project_id=doc["project_id"],
         task_type=TaskType(doc["task_type"]),
         status=TaskStatus(doc.get("status", TaskStatus.QUEUED.value)),
@@ -100,7 +100,6 @@ class MongoProjectRepository:
         self.projects = db[collection_name]
 
     async def ensure_indexes(self) -> None:
-        await self.projects.create_index("id", unique=True)
         await self.projects.create_index("status")
 
     async def create(self, req) -> ProjectRecord:
@@ -117,12 +116,12 @@ class MongoProjectRepository:
         return rec
 
     async def get(self, project_id: str) -> ProjectRecord | None:
-        doc = await self.projects.find_one({"id": project_id}, {"_id": 0})
+        doc = await self.projects.find_one({"_id": project_id})
         return project_from_doc(doc) if doc else None
 
     async def set_status(self, project_id: str, status: ProjectStatus) -> None:
         await self.projects.update_one(
-            {"id": project_id},
+            {"_id": project_id},
             {"$set": {"status": status.value}},
         )
 
@@ -130,7 +129,7 @@ class MongoProjectRepository:
         self, project_id: str, brief: ResearchBrief, outline: list[OutlineNode]
     ) -> None:
         await self.projects.update_one(
-            {"id": project_id},
+            {"_id": project_id},
             {
                 "$set": {
                     "brief": brief.model_dump(mode="json"),
@@ -142,7 +141,7 @@ class MongoProjectRepository:
 
     async def save_outline(self, project_id: str, outline: list[OutlineNode]) -> None:
         await self.projects.update_one(
-            {"id": project_id},
+            {"_id": project_id},
             {
                 "$set": {
                     "outline": [item.model_dump(mode="json") for item in outline],
@@ -173,7 +172,7 @@ class MongoProjectRepository:
         rec.reports.append(report)
         rec.status = ProjectStatus.REPORT_READY
 
-        await self.projects.replace_one({"id": project_id}, project_to_doc(rec))
+        await self.projects.replace_one({"_id": project_id}, project_to_doc(rec))
 
     async def latest_report(self, project_id: str) -> Report | None:
         rec = await self.get(project_id)
@@ -189,7 +188,6 @@ class MongoTaskRepository:
         self.tasks = db[collection_name]
 
     async def ensure_indexes(self) -> None:
-        await self.tasks.create_index("id", unique=True)
         await self.tasks.create_index("project_id")
         await self.tasks.create_index("status")
         await self.tasks.create_index("created_at")
@@ -200,7 +198,7 @@ class MongoTaskRepository:
         return rec
 
     async def get(self, task_id: str) -> TaskRecord | None:
-        doc = await self.tasks.find_one({"id": task_id}, {"_id": 0})
+        doc = await self.tasks.find_one({"_id": task_id})
         return task_from_doc(doc) if doc else None
 
     async def update(
@@ -223,4 +221,4 @@ class MongoTaskRepository:
                 "trace": {"$each": [item.model_dump(mode="json") for item in trace]}
             }
 
-        await self.tasks.update_one({"id": task_id}, update_doc)
+        await self.tasks.update_one({"_id": task_id}, update_doc)

@@ -44,8 +44,9 @@ app/
 │   ├── projects.py
 │   ├── reports.py
 │   └── tasks.py
-├── repository.py            # 数据访问层，当前为内存实现
-├── background.py            # 后台任务调度，当前基于 asyncio
+├── repository.py            # 数据访问 facade，底层可切换 memory / mongodb
+├── repositories/            # 仓储协议、内存实现、MongoDB 实现和工厂
+├── background.py            # 后台任务调度，当前基于 asyncio，生产可替换 Celery
 ├── agents.py                # 研究管理与信息检索智能体
 ├── tools/                   # 搜索、知识库、网页解析、重排等工具接口
 ├── pipeline/                # 证据处理与交叉验证
@@ -53,9 +54,12 @@ app/
 └── report.py                # HTML 报告渲染与引用绑定
 
 docs/
-├── 01-概要设计与技术方案.md
-├── 02-接口与子系统设计.md
-└── 03-项目实现过程.md
+├── 01_项目概述与架构设计.md
+├── 02_异步任务构建和数据存储.md
+├── 03_研究Agent设计与开发.md
+├── 04_报告生成与系统串联.md
+├── 05-MongoDB存储实现方案.md
+└── 06-Celery后台任务改造方案.md
 
 scripts/
 └── smoke.py                 # 端到端冒烟测试
@@ -229,8 +233,8 @@ curl http://127.0.0.1:8000/api/v1/tasks/{task_id}/trace
 | `app/tools/page_extract.py` | 桩网页解析 | 使用 `httpx` 抓取，`trafilatura` / readability 抽正文 |
 | `app/tools/rerank.py` | 桩重排 | 接入 BGE reranker、Cohere rerank 或 Cross-Encoder |
 | `app/agents.py` | 桩 LLM 客户端 | 接入 OpenAI、Anthropic 或企业私有模型服务 |
-| `app/repository.py` | 内存存储 | 替换为 PostgreSQL、对象存储和审计表 |
-| `app/background.py` | `asyncio.create_task` | 替换为 Celery、RQ、Arq 或工作流平台 |
+| `app/repository.py` / `app/repositories/*` | Memory / MongoDB 双实现 | MongoDB replica set、对象存储、审计事件和必要事务 |
+| `app/background.py` | `asyncio.create_task` | 通过 Dispatcher 替换为 Celery、RQ、Arq 或工作流平台 |
 | `app/workflow/graph.py` | LangGraph 可选 | 启用 checkpointer，实现断点恢复和状态持久化 |
 | `app/report.py` | HTML 模板渲染 | 扩展为 PDF、Markdown、Docx 或前端富文本报告 |
 
@@ -244,10 +248,12 @@ curl http://127.0.0.1:8000/api/v1/tasks/{task_id}/trace
 
 更完整的系统设计见：
 
-- `docs/01-概要设计与技术方案.md`
-- `docs/02-接口与子系统设计.md`
-- `docs/03-项目实现过程.md`
-- `docs/04-阶段一实现与企业工程建议.md`
+- `docs/01_项目概述与架构设计.md`
+- `docs/02_异步任务构建和数据存储.md`
+- `docs/03_研究Agent设计与开发.md`
+- `docs/04_报告生成与系统串联.md`
+- `docs/05-MongoDB存储实现方案.md`
+- `docs/06-Celery后台任务改造方案.md`
 
 这些文档包含业务状态机、模块职责、REST 契约、Evidence Schema、工作流节点、评测体系、可观测性和部署扩展建议。
 
