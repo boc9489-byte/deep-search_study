@@ -2,6 +2,8 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.6
+pydantic-settings>=2.2
+motor>=3.6
 
 # 工作流编排（可选：未安装时自动降级为本地执行器）
 # langgraph>=0.2

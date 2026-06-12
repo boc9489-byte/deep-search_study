@@ -1,6 +1,6 @@
 """集中配置：环境变量、模型、检索参数、阈值、证据打分权重。
 
-生产环境用 pydantic-settings 从 .env / 环境变量加载；此处给出默认值，
+使用 pydantic-settings 从 .env / 环境变量加载，同时保留默认值，
 保证 clone 后无需任何外部配置即可跑通主链路。
 
 设计方案对比：
@@ -8,11 +8,14 @@
     也无法按环境区分开发/测试/生产。
   - 方案 B：集中 Settings。优点是检索、质量阈值、模型名、并发等参数统一可见，
     后续迁移到环境变量或配置中心也容易；缺点是需要维护配置结构。
-  - 阶段一选择方案 B，但暂不引入 pydantic-settings，避免增加运行依赖。
+  - 阶段一选择方案 B；引入 MongoDB 存储后升级为 pydantic-settings，
+    统一管理存储后端和连接参数。
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 @dataclass
@@ -78,8 +81,7 @@ class QualityThresholds:
     min_sources_per_fact: int = 1       # 一个事实至少需要的来源数
 
 
-@dataclass
-class Settings:
+class Settings(BaseSettings):
     app_name: str = "deepsearch"
     api_prefix: str = "/api/v1"
 
@@ -90,6 +92,13 @@ class Settings:
     # 并发：研究执行时同时处理的原子问题数。
     # 接入真实搜索/网页解析/LLM 后，要结合外部 API 限流和成本下调。
     max_concurrent_questions: int = 4
+
+    # 存储后端：默认使用内存，生产或本地持久化可切换为 mongodb。
+    storage_backend: str = "memory"
+    mongodb_uri: str = "mongodb://127.0.0.1:27017"
+    mongodb_db: str = "deepsearch"
+    mongodb_projects_collection: str = "projects"
+    mongodb_tasks_collection: str = "tasks"
 
     weights: EvidenceScoreWeights = field(default_factory=EvidenceScoreWeights)
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
@@ -103,6 +112,12 @@ class Settings:
             "nature.com": 0.9, "arxiv.org": 0.8,
             "internal_kb": 0.85,  # 内部库基础可信度
         }
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="DEEPSEARCH_",
+        env_file=".env",
+        extra="ignore",
     )
 
 
